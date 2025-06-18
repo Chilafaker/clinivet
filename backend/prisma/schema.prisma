@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VET
+  ASSISTANT
+}
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+  DECEASED
+}
+
+enum AppointmentStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+  MIXED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  role          Role
+  appointments  Appointment[]
+  consultations Consultation[]
+  vaccines      Vaccine[]
+  dewormings    Deworming[]
+}
+
+model Patient {
+  id            String         @id @default(cuid())
+  name          String
+  species       String
+  breed         String
+  gender        String
+  birthdate     DateTime
+  status        PatientStatus  @default(ACTIVE)
+  ownerName     String
+  ownerPhone    String
+  ownerEmail    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  consultations Consultation[]
+  vaccines      Vaccine[]
+  dewormings    Deworming[]
+  baths         Bath[]
+  documents     Document[]
+  appointments  Appointment[]
+  sales         Sale[]
+  followUps     FollowUp[]
+}
+
+model Consultation {
+  id           String   @id @default(cuid())
+  date         DateTime
+  notes        String
+  diagnosis    String
+  treatment    String
+  vetId        String
+  patientId    String
+  veterinarian User     @relation(fields: [vetId], references: [id])
+  patient      Patient  @relation(fields: [patientId], references: [id])
+}
+
+model Vaccine {
+  id           String    @id @default(cuid())
+  type         String
+  batch        String
+  appliedDate  DateTime
+  nextDose     DateTime?
+  vetId        String
+  patientId    String
+  veterinarian User      @relation(fields: [vetId], references: [id])
+  patient      Patient   @relation(fields: [patientId], references: [id])
+}
+
+model Deworming {
+  id           String    @id @default(cuid())
+  type         String
+  appliedDate  DateTime
+  nextDose     DateTime?
+  vetId        String
+  patientId    String
+  veterinarian User      @relation(fields: [vetId], references: [id])
+  patient      Patient   @relation(fields: [patientId], references: [id])
+}
+
+model Bath {
+  id        String   @id @default(cuid())
+  date      DateTime
+  type      String
+  notes     String?
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id])
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  url        String
+  type       String
+  uploadedAt DateTime @default(now())
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id])
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  date      DateTime
+  service   String
+  status    AppointmentStatus @default(PENDING)
+  patientId String
+  userId    String
+  notes     String?
+  patient   Patient           @relation(fields: [patientId], references: [id])
+  user      User              @relation(fields: [userId], references: [id])
+}
+
+model Product {
+  id        String     @id @default(cuid())
+  name      String
+  price     Float
+  stock     Int
+  active    Boolean    @default(true)
+  saleItems SaleItem[]
+}
+
+model Service {
+  id        String     @id @default(cuid())
+  name      String
+  price     Float
+  duration  Int // En minutos
+  active    Boolean    @default(true)
+  saleItems SaleItem[]
+}
+
+model Sale {
+  id        String        @id @default(cuid())
+  date      DateTime      @default(now())
+  total     Float
+  payment   PaymentMethod
+  patientId String?
+  patient   Patient?      @relation(fields: [patientId], references: [id])
+  items     SaleItem[]
+}
+
+model SaleItem {
+  id        String   @id @default(cuid())
+  saleId    String
+  productId String?
+  serviceId String?
+  quantity  Int
+  unitPrice Float
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  product   Product? @relation(fields: [productId], references: [id])
+  service   Service? @relation(fields: [serviceId], references: [id])
+}
+
+model ClinicSettings {
+  id      Int     @id @default(1)
+  name    String
+  address String
+  phone   String
+  email   String
+  logoUrl String?
+}
+
+model FollowUp {
+  id          String   @id @default(cuid())
+  patientId   String
+  type        String   // Ej: "VACUNA", "BAÑO", "POST_CITA"
+  message     String
+  status      String   // PENDING, SENT, FAILED
+  sendDate    DateTime
+  createdAt   DateTime @default(now())
+  patient     Patient  @relation(fields: [patientId], references: [id])
+}
